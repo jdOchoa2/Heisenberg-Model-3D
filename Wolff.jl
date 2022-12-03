@@ -84,31 +84,65 @@ function Energy(state,L3,neighbours)
     return energy
 end
 
-function Proceed(state, β, n_samples, L, L2, L3, neighbours,τ)
+function Proceed(state, β, n_samples, L, L2, L3, neighbours,τ,τ0)
     """For a single value of β in a lattice of size L, creates a sequence of 
     states and meassures the observables for the de-correlated configurations.
     Then it prints the desired quantities."""
     Mmean,M2mean,M4mean,Emean,E2mean,p = zeros(6)
-    progress = 0      #Samples taken
-    while progress < n_samples
+    c = 3            #Safty factor
+    #First, reach the equilibrium...
+    for t in 1:c*τ0  #Current time in MCSS
+        mcss = 0     #Number of spins flipped
+        while mcss < L3 
+            mcss += NewState(state, L, L2, L3, β, neighbours) 
+        end 
+    end
+    #Then take samples...
+    for progress in  1:n_samples #Samples progress
         M = Magnetization(state); E = Energy(state,L3,neighbours)
         Mmean += M; M2mean += M*M; M4mean += M^4 
         Emean += E; E2mean += E*E
-        t = 0         #Current virtual time in MCSS
-        while t < τ 
+        for t in 1:c*τ  #Current time in MCSS
             mcss = 0  #Number of spins flipped
-            while mcss < L3 
-                mcss += NewState(state, L, L2, L3, β, neighbours) 
+            while mcss < L3
+                Temp = NewState(state, L, L2, L3, β, neighbours) 
+                mcss += Temp
+                if mcss == 0
+                    p += Temp #Get a sample of the cluster size
+                end
             end 
-        t += 1 
         end
-        p += NewState(state, L, L2, L3, β, neighbours) #Additional step just to get the cluster size
-        progress += 1 
     end
+    #Calculated and print all desired quantities
     Mmean /= n_samples; M2mean /= n_samples; M4mean /= n_samples
     Emean /= n_samples; E2mean /= n_samples; p /= n_samples
     χ  = β*(M2mean-Mmean*Mmean)
-    Cv = β*β*(E2mean-Mmean*Mmean)
+    Cv = β*β*(E2mean-Emean*Emean)
     U  = 1. - 1. /3. *(M4mean/(M2mean*M2mean))
     print(β," ",Mmean," ",M2mean," ",M4mean," ",Emean," ",E2mean," ",p," ",χ," ",Cv," ",U,"\n")
+end
+
+function Equilibrium(β, Ttime, N_samples, L, L2, L3, neighbours)
+    """Returns the nonlinear correlation function for magnetization and energy
+    using samples across multiple simulations (N_samples) during Ttime steps 
+    and for a given temperature"""
+    Mmean = zeros(Ttime); Emean = zeros(Ttime)
+    for n in 1:N_samples
+        state = [RandomSpin() for i in 1:L3] 
+        for t in 1:Ttime
+            M = Magnetization(state); E = Energy(state,L3,neighbours)
+            Mmean[t] += M; Emean[t] += E
+            mcss = 0
+            while mcss < L3 
+                mcss += NewState(state, L, L2, L3, βc, neighbours) 
+            end 
+        end
+    end
+    Mmean /= N_samples
+    Emean /= N_samples
+    ϕM = (1/(Mmean[1] - Mmean[end])).*(Mmean .- Mmean[end])
+    ϕE = (1/(Emean[1] - Emean[end])).*(Emean .- Emean[end])
+    for i in 1:Ttime
+        print(ϕM[i]," ",ϕE[I],"\n")
+    end
 end
