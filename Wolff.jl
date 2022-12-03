@@ -143,6 +143,6 @@ function Equilibrium(β, Ttime, N_samples, L, L2, L3, neighbours)
     ϕM = (1/(Mmean[1] - Mmean[end])).*(Mmean .- Mmean[end])
     ϕE = (1/(Emean[1] - Emean[end])).*(Emean .- Emean[end])
     for i in 1:Ttime
-        print(ϕM[i]," ",ϕE[I],"\n")
+        print(ϕM[i]," ",ϕE[i],"\n")
     end
 end
