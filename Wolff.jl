@@ -83,8 +83,7 @@ function Energy(state,L3,neighbours)
     end
     return energy
 end
-
-function Proceed(state, β, n_samples, L, L2, L3, neighbours,τ,τ0)
+function Proceed(state, β, n_samples, L, L2, L3, neighbours,τ,τ0,save)
     """For a single value of β in a lattice of size L, creates a sequence of 
     states and meassures the observables for the de-correlated configurations.
     Then it prints the desired quantities."""
@@ -103,19 +102,25 @@ function Proceed(state, β, n_samples, L, L2, L3, neighbours,τ,τ0)
         Mmean += M; M2mean += M*M; M4mean += M^4 
         Emean += E; E2mean += E*E
         for t in 1:c*τ  #Current time in MCSS
-            mcss = 0  #Number of spins flipped
+            mcss = 0    #Number of spins flipped
             while mcss < L3
                 Temp = NewState(state, L, L2, L3, β, neighbours) 
-                mcss += Temp
                 if mcss == 0
                     p += Temp #Get a sample of the cluster size
                 end
+                mcss += Temp
             end 
+        end
+    end
+    #save last state
+    if save == 1
+        open("./States/L"*string(L)*"_T"*string(1/β)*".txt", "a") do io
+            writedlm(io, state)
         end
     end
     #Calculated and print all desired quantities
     Mmean /= n_samples; M2mean /= n_samples; M4mean /= n_samples
-    Emean /= n_samples; E2mean /= n_samples; p /= n_samples
+    Emean /= n_samples; E2mean /= n_samples; p /= (n_samples*c*τ)
     χ  = β*(M2mean-Mmean*Mmean)
     Cv = β*β*(E2mean-Emean*Emean)
     U  = 1. - 1. /3. *(M4mean/(M2mean*M2mean))
